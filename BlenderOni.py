@@ -8,7 +8,7 @@ bl_info={
     'description': "Companion addon for Oni-Rigify animation rig available in the documentation link.",
     'doc_url': "http://mods.oni2.net/node/388",
     'blender': (2,80,0),
-    'version': (1,0,1),
+    'version': (1,1),
     'location': "View3D > BlenderOni",
     'category': "BlenderOni"
 }
@@ -45,13 +45,17 @@ class BOP1(BlenderOniPanel,bpy.types.Panel):
         row.prop(sc, "BKRM_startFrame",text="Start:")
         row.prop(sc, "BKRM_endFrame",text="End:")
         row = box.row()
-        row.operator("data.bake_keyframe_rotation_mode",text= "Bake Keyframe Rotation Mode", icon="LIGHT_DATA")
+        row.operator("data.bake_object_rotation_mode",text= "Bake Object Rotation Mode", icon="LIGHT_DATA")
+        row = box.row()
+        row.operator("data.bake_bone_rotation_mode",text= "Bake Bone Rotation Mode", icon="BONE_DATA")
         
         box = layout.box()
         row = box.row()
         row.prop(sc,"intendedRotMode_CRM",text="")
         row = box.row()
-        row.operator("data.rotation_mode_changer",text="Change Rotation Mode", icon="ORIENTATION_GIMBAL")  
+        row.operator("data.object_rotation_mode_changer",text="Change Object Rotation Mode", icon="ORIENTATION_GIMBAL")  
+        row = box.row()
+        row.operator("data.bone_rotation_mode_changer",text="Change Bone Rotation Mode", icon="BONE_DATA") 
         
         box = layout.box()
         row = box.row()
@@ -146,10 +150,10 @@ class BOP4(BlenderOniPanel,bpy.types.Panel):
         row=box.row(align=True)
         row.operator("data.character_model_constrainer",text="Constrain Character Model",icon="CONSTRAINT")
 
-class BakeKeyframeRotationMode_Operator(bpy.types.Operator):
-        bl_idname="data.bake_keyframe_rotation_mode"
+class BakeObjectRotationMode_Operator(bpy.types.Operator):
+        bl_idname="data.bake_object_rotation_mode"
         bl_label="Bake Keyframe Rotation Mode"
-        bl_description="Bake keyframes in the specified frame range and rotation mode.\nUse in Object mode"
+        bl_description="Bake keyframes of the selected objects in the specified frame range and rotation mode.\nUse in Object mode"
         
         def execute(self,context):
             #print(bpy.context.scene.BQK_start_frame)
@@ -170,26 +174,66 @@ class BakeKeyframeRotationMode_Operator(bpy.types.Operator):
                     bpy.ops.anim.keyframe_insert_menu(type="Rotation")
                     obj.rotation_mode=tmp#"XYZ"
             return{"FINISHED"}
+        
+class BakeBoneRotationMode_Operator(bpy.types.Operator):
+    bl_idname="data.bake_bone_rotation_mode"
+    bl_label="Bake Bone Rotation Mode"
+    bl_description="Bake keyframes of the selected bones in the specified frame range and rotation mode.\nUse in Pose mode"
+    def execute(self,context):
+        #print(bpy.context.scene.BQK_start_frame)
+        #bpy.ops.mesh.primitive_cube_add()
+        
+        sc=bpy.context.scene
 
-class RotationModeChanger_Operator(bpy.types.Operator):
-        bl_idname="data.rotation_mode_changer"
-        bl_label="Rotation Mode Changer"
+        start=sc.BKRM_startFrame
+        end=sc.BKRM_endFrame
+
+        bones=bpy.context.selected_pose_bones_from_active_object
+
+        for i in range(start,end+1):
+            sc.frame_set(i)
+            for bone in bones:
+                tmp=bone.rotation_mode
+                bone.rotation_mode=sc.intendedRotMode_BKRM#"QUATERNION"
+                bpy.ops.anim.keyframe_insert_menu(type="Rotation")
+                bone.rotation_mode=tmp#"XYZ"
+        return{"FINISHED"}
+
+class ObjectRotationModeChanger_Operator(bpy.types.Operator):
+        bl_idname="data.object_rotation_mode_changer"
+        bl_label="Object Rotation Mode Changer"
         bl_description="Change rotation mode of selected objects to the specified rotation mode.\nUse in Object mode"
 
         def execute(self,context):
             sc=bpy.context.scene
 
-            Objects=bpy.context.selected_objects
+            objects=bpy.context.selected_objects
 
             rot_mode=sc.intendedRotMode_CRM#XYZ or QUATERNION
 
-            for obj in Objects:
+            for obj in objects:
                 obj.rotation_mode=rot_mode
+            return{"FINISHED"}
+
+class BoneRotationModeChanger_Operator(bpy.types.Operator):
+        bl_idname="data.bone_rotation_mode_changer"
+        bl_label="Bone Rotation Mode Changer"
+        bl_description="Change rotation mode of selected bones to the specified rotation mode.\nUse in Object mode"
+        
+        def execute(self,context):
+            sc=bpy.context.scene
+
+            bones=bpy.context.selected_pose_bones_from_active_object
+
+            rot_mode=sc.intendedRotMode_CRM#XYZ or QUATERNION
+
+            for bone in bones:
+                bone.rotation_mode=rot_mode
             return{"FINISHED"}
                                 
 class ObjectConstraintEnabler_Operator(bpy.types.Operator):
     bl_idname="data.object_constraint_enabler"
-    bl_label="Bone Constraint Enabler"
+    bl_label="Object Constraint Enabler"
     bl_description="Switch on and off object constraints within selected objects\nUse in Object mode"
 
     def execute(self,context):
@@ -328,6 +372,9 @@ class VisualTransformerObject_Operator(bpy.types.Operator):
         sc.frame_set(start) #set start frame
         for i in range(start, end+1): #loop for every frame
             sc.frame_set(i)
+            sc.frame_set(i)
+            sc.frame_set(i)
+            sc.frame_set(i)
             bpy.ops.object.visual_transform_apply()
             bpy.ops.anim.keyframe_insert_menu(type='BUILTIN_KSI_LocRot')
         return{"FINISHED"}
@@ -346,6 +393,9 @@ class VisualTransformerBone_Operator(bpy.types.Operator):
 
         scene.frame_set(start) #set start frame
         for i in range(start, end+1): #loop for every frame
+            scene.frame_set(i)
+            scene.frame_set(i)
+            scene.frame_set(i)
             scene.frame_set(i)
             bpy.ops.pose.visual_transform_apply()
             bpy.ops.anim.keyframe_insert_menu(type='BUILTIN_KSI_LocRot')
@@ -513,8 +563,10 @@ class CharacterModelConstrainer(bpy.types.Operator):
         
 
 classes = (BOP_Main,BOP1,BOP2,BOP3,BOP4,
-    BakeKeyframeRotationMode_Operator, 
-    RotationModeChanger_Operator,
+    BakeObjectRotationMode_Operator, 
+    BakeBoneRotationMode_Operator, 
+    ObjectRotationModeChanger_Operator,
+    BoneRotationModeChanger_Operator,
     BoneConstraintEnabler_Operator, 
     ObjectConstraintEnabler_Operator,
     ObjectConstraintTargetSetter_Operator, 
