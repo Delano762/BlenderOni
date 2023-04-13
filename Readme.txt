@@ -1,4 +1,4 @@
-# BlenderOni 1.0.2
+# BlenderOni 1.1
 # Author: Delano762
 
 ## Description
